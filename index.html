@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SeatScope demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0B1F3A; --navy2:#16325A; --ink:#0B1F3A; --ink2:#2A3B55; --muted:#4D5C72;
+    --bg:#F3F5F8; --line:#E1E6ED; --free:#0F766E; --occ:#CDD4DE;
+    --held:repeating-linear-gradient(135deg,#E9A23B 0 4px,#F6C77F 4px 8px);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden}
+  body{background:var(--stage,#FFFFFF);font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:var(--ink);font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:center}
+  button{font-family:inherit;color:inherit}
+  #fit{transform-origin:center center}
+  .phone{width:414px;height:924px;background:#0B1424;border-radius:46px;padding:12px;box-shadow:0 20px 60px rgba(11,31,58,.25)}
+  .screen{width:390px;height:900px;border-radius:34px;overflow:hidden;background:var(--bg);position:relative}
+  .view{position:absolute;inset:0;display:flex;flex-direction:column;transition:transform .32s ease,opacity .32s ease}
+  .view.hidden-right{transform:translateX(100%);opacity:0;pointer-events:none}
+  .view.hidden-left{transform:translateX(-25%);opacity:0;pointer-events:none}
+
+  .hdr{background:var(--navy);color:#fff;display:flex;flex-direction:column}
+  .live{display:flex;align-items:center;gap:8px;background:var(--navy2);padding:7px 12px;font-size:12px;font-weight:600;color:#E6EDF7;white-space:nowrap}
+  .dot{width:8px;height:8px;border-radius:50%;background:#5EE0C6;animation:pulse 2s infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(94,224,198,.6)}70%{box-shadow:0 0 0 7px rgba(94,224,198,0)}100%{box-shadow:0 0 0 0 rgba(94,224,198,0)}}
+  .eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:#A9B8CF}
+  .bar{display:flex;gap:2px;overflow:hidden}
+  .bar>div{transition:flex-grow .6s ease;min-width:0}
+  .card{background:#fff;border:1px solid var(--line)}
+  .sw{width:12px;height:12px;display:block}
+  .legend{display:flex;gap:16px;font-size:12px;font-weight:600;color:var(--ink2)}
+  .legend span{display:flex;align-items:center;gap:6px}
+  .icon{width:40px;height:40px;background:#EEF2F7;display:flex;align-items:center;justify-content:center;flex:none}
+  .tag{font-size:11px;font-weight:700;padding:3px 8px}
+  .num{font-size:28px;font-weight:800;line-height:1;transition:color .3s}
+  .flash{animation:flash .9s ease}
+  @keyframes flash{0%{background:#FFF4D6}100%{background:transparent}}
+  .btn{height:44px;border:1.5px solid var(--navy);background:#fff;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;width:100%}
+  .btn.on{background:var(--navy);color:#fff}
+  .cta{height:50px;background:var(--navy);color:#fff;border:0;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;cursor:pointer;width:100%}
+  .foot{font-size:11px;color:#5A687D;text-align:center;line-height:1.5}
+  .chip{height:34px;padding:0 14px;border:1px solid #3C5A85;background:transparent;color:#E6EDF7;font-size:13px;font-weight:600;cursor:pointer}
+  .chip.on{background:#fff;border-color:#fff;color:var(--navy)}
+  .zone{position:absolute;border:1px dashed #C4CCD8;background:#FAFBFC;transition:opacity .25s}
+  .zlabel{position:absolute;left:8px;top:5px;font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+  .seat{position:absolute;padding:0;border:0;cursor:pointer;transition:background .4s, box-shadow .15s}
+  .seat:focus-visible{outline:2px solid var(--navy);outline-offset:2px}
+  .seat.changed{animation:seatpop .9s ease}
+  @keyframes seatpop{0%{transform:scale(1.6)}100%{transform:scale(1)}}
+  .back{width:44px;height:44px;margin-left:-12px;display:flex;align-items:center;justify-content:center;background:transparent;border:0;color:#fff;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="fit">
+  <div class="phone">
+    <div class="screen">
+
+      <!-- ===== Overview ===== -->
+      <section class="view" id="v-main" aria-label="Zones overview">
+        <div class="hdr" style="padding:22px 20px 18px;gap:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <div class="eyebrow">SeatScope</div>
+              <div style="font-size:22px;font-weight:700">Central Library</div>
+              <div style="font-size:13px;color:#C9D4E5">Pilot floor</div>
+            </div>
+            <div class="live"><span class="dot"></span><span class="ago">Live · just now</span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:baseline;gap:8px">
+              <span id="t-free" style="font-size:44px;font-weight:800;line-height:1">0</span>
+              <span style="font-size:16px;font-weight:600;color:#E6EDF7">seats free right now</span>
+            </div>
+            <div class="bar" style="height:10px;background:var(--navy2)">
+              <div id="tb-free" style="background:var(--free)"></div>
+              <div id="tb-held" style="background:var(--held)"></div>
+              <div id="tb-occ" style="background:#4A5F80"></div>
+            </div>
+            <div style="font-size:13px;color:#C9D4E5"><span id="t-held">0</span> more held by belongings · <span id="t-total">0</span> seats on this floor</div>
+          </div>
+        </div>
+
+        <div class="card" style="margin:12px 16px 0;padding:10px 14px;display:flex;flex-direction:column;gap:8px">
+          <div class="legend">
+            <span><i class="sw" style="background:var(--free)"></i>Free</span>
+            <span><i class="sw" style="background:repeating-linear-gradient(135deg,#E9A23B 0 3px,#F6C77F 3px 6px)"></i>Held by belongings</span>
+            <span><i class="sw" style="background:var(--occ)"></i>Occupied</span>
+          </div>
+          <div style="font-size:12px;color:var(--muted);line-height:1.45">“Held” means a bag or laptop is on the seat but nobody is sitting there.</div>
+        </div>
+
+        <div id="zone-cards" style="padding:12px 16px 0;display:flex;flex-direction:column;gap:10px"></div>
+
+        <div style="padding:12px 16px 0">
+          <button class="cta" id="open-map">
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2z"/><path d="M9 4v14"/><path d="M15 6v14"/></svg>
+            See seats on the floor map
+          </button>
+        </div>
+        <div class="foot" style="padding:12px 16px 0">Seat sensors on every table · no cameras · no personal data</div>
+      </section>
+
+      <!-- ===== Floor map ===== -->
+      <section class="view hidden-right" id="v-map" aria-label="Floor map">
+        <div class="hdr" style="padding:16px 20px;gap:12px">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div style="display:flex;align-items:center;gap:4px">
+              <button class="back" id="close-map" aria-label="Back to zones">
+                <svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+              </button>
+              <div style="display:flex;flex-direction:column;gap:1px">
+                <div style="font-size:20px;font-weight:700">Floor map</div>
+                <div style="font-size:12px;color:#C9D4E5">Central Library · Pilot floor</div>
+              </div>
+            </div>
+            <div class="live"><span class="dot"></span><span>Live</span></div>
+          </div>
+          <div id="chips" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+        </div>
+
+        <div id="plan" style="margin:16px 16px 0;position:relative;width:358px;height:440px">
+          <svg aria-hidden="true" width="358" height="440" viewBox="0 0 358 440" style="position:absolute;left:0;top:0">
+            <polygon points="4,4 354,4 354,300 260,300 260,436 4,436" fill="#FFFFFF"/>
+            <polyline points="285,300 260,300 260,436 4,436 4,4 354,4 354,300 330,300" fill="none" stroke="#0B1F3A" stroke-width="3"/>
+            <line x1="40" y1="4" x2="320" y2="4" stroke="#7FB3D5" stroke-width="3" stroke-dasharray="18 4"/>
+            <path d="M307 336 L307 310 M300 317 L307 310 L314 317" fill="none" stroke="#0B1F3A" stroke-width="2"/>
+          </svg>
+          <div style="position:absolute;left:266px;top:340px;width:82px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)">Entrance</div>
+          <div style="position:absolute;left:0;top:-14px;width:358px;text-align:center;font-size:9px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#4D7A99">Windows</div>
+          <div style="position:absolute;left:254px;top:160px;width:92px;height:136px;border:1px solid #C4CCD8;background:repeating-linear-gradient(45deg,#EEF1F5 0 6px,#E4E8EE 6px 12px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)">
+            <span>Lifts</span><span>Stairs</span><span>Toilets</span>
+          </div>
+        </div>
+
+        <div class="legend" style="margin:12px 16px 0;justify-content:center">
+          <span><i class="sw" style="background:var(--free)"></i>Free</span>
+          <span><i class="sw" style="background:repeating-linear-gradient(135deg,#E9A23B 0 3px,#F6C77F 3px 6px)"></i>Held by belongings</span>
+          <span><i class="sw" style="background:var(--occ)"></i>Occupied</span>
+        </div>
+
+        <div class="card" id="seat-panel" style="margin:14px 16px 0;padding:16px;min-height:104px;display:flex;flex-direction:column;justify-content:center"></div>
+        <div class="foot" style="padding:14px 16px 0">Schematic layout · seat sensors on every table · no cameras</div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var params = new URLSearchParams(location.search);
+  if (params.get('bg')) document.body.style.setProperty('--stage', '#' + params.get('bg').replace('#',''));
+  var simulate = params.get('live') !== '0';
+  var noFrame = params.get('frame') === '0';
+  if (noFrame) {
+    var ph = document.querySelector('.phone');
+    ph.style.background = 'transparent'; ph.style.boxShadow = 'none'; ph.style.padding = '0'; ph.style.width = '390px'; ph.style.height = '900px';
+    document.querySelector('.screen').style.borderRadius = '0';
+  }
+
+  // ---------- Seat layout (schematic) ----------
+  var zones = {
+    quiet:  { name:'Quiet zone',    short:'Quiet',         prefix:'Q', box:{x:12,y:14,w:334,h:136}, seats:[], tables:[] },
+    collab: { name:'Collaborative', short:'Collaborative', prefix:'G', box:{x:12,y:160,w:234,h:136}, seats:[], tables:[] },
+    carrel: { name:'Carrels',       short:'Carrels',       prefix:'C', box:{x:12,y:304,w:240,h:124}, seats:[], tables:[] }
+  };
+  [{x:10,y:42},{x:172,y:42},{x:10,y:100},{x:172,y:100}].forEach(function(t){
+    zones.quiet.tables.push({x:t.x,y:t.y,w:146,h:10});
+    for (var k=0;k<6;k++) zones.quiet.seats.push({x:t.x+4+24*k,y:t.y-17,w:14,h:14});
+    for (var k2=0;k2<6;k2++) zones.quiet.seats.push({x:t.x+4+24*k2,y:t.y+13,w:14,h:14});
+  });
+  [40,116,192].forEach(function(cx){ [46,108].forEach(function(cy){
+    zones.collab.tables.push({x:cx-12,y:cy-12,w:24,h:24,round:true});
+    [[cx-6,cy-26],[cx+14,cy-6],[cx-6,cy+13],[cx-27,cy-6]].forEach(function(p){ zones.collab.seats.push({x:p[0],y:p[1],w:13,h:13}); });
+  });});
+  for (var i=0;i<8;i++) zones.carrel.seats.push({x:10+28*i,y:35,w:22,h:24,booth:true});
+  for (var j=0;j<8;j++) zones.carrel.seats.push({x:10+28*j,y:69,w:22,h:24,booth:true});
+
+  function init(z, freeIdx, heldIdx){
+    z.seats.forEach(function(s,i){
+      s.id = z.prefix + String(i+1).padStart(2,'0');
+      s.state = freeIdx.indexOf(i)>=0 ? 'free' : heldIdx.indexOf(i)>=0 ? 'held' : 'occ';
+    });
+  }
+  init(zones.quiet,  [2,5,9,14,17,22,27,30,35,40,43,46], []);
+  init(zones.collab, [1,6,11,15,20], [3,13]);
+  init(zones.carrel, [], [2,9,14]);
+
+  var META = {
+    free:{label:'Free', bg:'#DDF1EE', fg:'#0B5C55', fill:'var(--free)'},
+    held:{label:'Held by belongings', bg:'#FCEBD0', fg:'#7A4100', fill:'repeating-linear-gradient(135deg,#E9A23B 0 3px,#F6C77F 3px 6px)'},
+    occ: {label:'Occupied', bg:'#E6E9EE', fg:'#2A3B55', fill:'var(--occ)'}
+  };
+  var ICONS = {
+    quiet:'<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5.5A1.5 1.5 0 0 1 5.5 4H11v16H5.5A1.5 1.5 0 0 1 4 18.5z"/><path d="M20 5.5A1.5 1.5 0 0 0 18.5 4H13v16h5.5a1.5 1.5 0 0 0 1.5-1.5z"/></svg>',
+    collab:'<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"/><circle cx="16.5" cy="9" r="2.5"/><path d="M2.5 19c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M14.5 14.5c2.8-.6 6 1 6 4.5"/></svg>',
+    carrel:'<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4v16"/><path d="M20 4v16"/><path d="M4 12h16"/><path d="M8 12v8"/><path d="M16 12v8"/></svg>'
+  };
+  var BELL = '<svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 1 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.9 1.9 0 0 0 3.4 0"/></svg>';
+  var TAP = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5a1.5 1.5 0 0 1 3 0v5"/><path d="M12 10V8.5a1.5 1.5 0 0 1 3 0V11"/><path d="M15 10.5a1.5 1.5 0 0 1 3 0V15a6 6 0 0 1-6 6h-1a6 6 0 0 1-5-2.7L4 15.5a1.5 1.5 0 0 1 2.4-1.8L9 16"/></svg>';
+
+  var ui = { filter:'all', selected:null, notify:{}, lastChange:Date.now() };
+  var ORDER = ['quiet','collab','carrel'];
+
+  function counts(z){
+    var c={free:0,held:0,occ:0};
+    z.seats.forEach(function(s){c[s.state]++;});
+    c.total=z.seats.length; return c;
+  }
+
+  // ---------- Overview ----------
+  var cardsEl = document.getElementById('zone-cards');
+  ORDER.forEach(function(key){
+    var z = zones[key];
+    var el = document.createElement('div');
+    el.className='card'; el.style.cssText='padding:14px 16px;display:flex;flex-direction:column;gap:10px';
+    el.innerHTML =
+      '<div style="display:flex;justify-content:space-between;align-items:center;gap:12px">' +
+        '<div style="display:flex;gap:12px;align-items:center"><div class="icon">'+ICONS[key]+'</div>' +
+        '<div style="display:flex;align-items:center;gap:8px"><span style="font-size:16px;font-weight:700">'+z.name+'</span>' +
+        '<span class="best" style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;background:var(--navy);color:#fff;padding:3px 6px;display:none">Best bet</span></div></div>' +
+        '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">' +
+          '<div style="display:flex;align-items:baseline;gap:4px"><span class="num"></span><span class="of" style="font-size:12px;font-weight:600;color:var(--muted)"></span></div>' +
+          '<span class="tag status"></span></div></div>' +
+      '<div class="bar" style="height:8px;background:#EEF2F7"><div class="b-free" style="background:var(--free)"></div><div class="b-held" style="background:var(--held)"></div><div class="b-occ" style="background:var(--occ)"></div></div>' +
+      '<div style="display:flex;justify-content:space-between;font-size:12px;color:var(--ink2);font-weight:500"><span class="l-free"></span><span class="l-held" style="color:#8A4B00;font-weight:600"></span><span class="l-occ"></span></div>' +
+      '<div class="notify-wrap"></div>';
+    z.card = el; cardsEl.appendChild(el);
+  });
+
+  function renderOverview(changedKey){
+    var T={free:0,held:0,occ:0,total:0}, best=-1, bestKey=null;
+    ORDER.forEach(function(k){ var c=counts(zones[k]); zones[k].c=c; T.free+=c.free;T.held+=c.held;T.occ+=c.occ;T.total+=c.total; if(c.free>best){best=c.free;bestKey=k;} });
+    document.getElementById('t-free').textContent=T.free;
+    document.getElementById('t-held').textContent=T.held;
+    document.getElementById('t-total').textContent=T.total;
+    document.getElementById('tb-free').style.flex=T.free+' 1 0px';
+    document.getElementById('tb-held').style.flex=T.held+' 1 0px';
+    document.getElementById('tb-occ').style.flex=T.occ+' 1 0px';
+    ORDER.forEach(function(k){
+      var z=zones[k], c=z.c, el=z.card, ratio=c.free/c.total, status, bg, fg;
+      if(c.free===0){status='Full';bg='#E6E9EE';fg='#2A3B55';}
+      else if(ratio<0.25){status='Filling up';bg='#FCEBD0';fg='#7A4100';}
+      else {status='Seats available';bg='#DDF1EE';fg='#0B5C55';}
+      var num=el.querySelector('.num'); num.textContent=c.free; num.style.color=c.free===0?'#2A3B55':'var(--free)';
+      el.querySelector('.of').textContent='/ '+c.total;
+      var st=el.querySelector('.status'); st.textContent=status; st.style.background=bg; st.style.color=fg;
+      el.querySelector('.best').style.display=(k===bestKey&&best>0)?'inline-block':'none';
+      el.querySelector('.b-free').style.flex=c.free+' 1 0px';
+      el.querySelector('.b-held').style.flex=c.held+' 1 0px';
+      el.querySelector('.b-occ').style.flex=c.occ+' 1 0px';
+      el.querySelector('.l-free').textContent=c.free+' free';
+      el.querySelector('.l-held').textContent=c.held>0?c.held+' held by belongings':'none held';
+      el.querySelector('.l-occ').textContent=c.occ+' occupied';
+      var wrap=el.querySelector('.notify-wrap');
+      if(c.free===0){
+        var on=!!ui.notify[k];
+        wrap.innerHTML='<button class="btn'+(on?' on':'')+'" data-k="'+k+'">'+BELL+(on?'We’ll ping you when one frees up':'Notify me when '+(k==='carrel'?'a carrel':'a seat')+' frees up')+'</button>';
+      } else wrap.innerHTML='';
+      if(changedKey===k){ el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+    });
+  }
+  cardsEl.addEventListener('click',function(e){
+    var b=e.target.closest('.btn'); if(!b) return;
+    var k=b.getAttribute('data-k'); ui.notify[k]=!ui.notify[k]; renderOverview();
+  });
+
+  // ---------- Floor map ----------
+  var plan=document.getElementById('plan');
+  ORDER.forEach(function(key){
+    var z=zones[key], b=z.box;
+    var zel=document.createElement('div'); zel.className='zone';
+    zel.style.cssText+='left:'+b.x+'px;top:'+b.y+'px;width:'+b.w+'px;height:'+b.h+'px';
+    zel.innerHTML='<div class="zlabel">'+z.short+' <span class="zcount"></span></div>';
+    if(key==='carrel'){ var d=document.createElement('div'); d.style.cssText='position:absolute;left:10px;top:63px;width:220px;height:2px;background:var(--navy)'; zel.appendChild(d); }
+    z.tables.forEach(function(t){
+      var te=document.createElement('div');
+      te.style.cssText='position:absolute;left:'+t.x+'px;top:'+t.y+'px;width:'+t.w+'px;height:'+t.h+'px;background:#DCE2EA'+(t.round?';border-radius:50%':'');
+      zel.appendChild(te);
+    });
+    z.seats.forEach(function(s){
+      var se=document.createElement('button'); se.className='seat';
+      se.style.cssText+='left:'+s.x+'px;top:'+s.y+'px;width:'+s.w+'px;height:'+s.h+'px'+(s.booth?';border-left:2px solid var(--navy)':'');
+      se.addEventListener('click',function(){ ui.selected={zone:key,seat:s}; renderMap(); });
+      s.el=se; zel.appendChild(se);
+    });
+    z.zel=zel; plan.appendChild(zel);
+  });
+
+  var chipsEl=document.getElementById('chips');
+  [['all','All'],['quiet','Quiet'],['collab','Collaborative'],['carrel','Carrels']].forEach(function(c){
+    var b=document.createElement('button'); b.className='chip'; b.textContent=c[1]; b.dataset.k=c[0];
+    b.addEventListener('click',function(){ ui.filter=c[0]; renderMap(); });
+    chipsEl.appendChild(b);
+  });
+
+  function renderMap(){
+    Array.prototype.forEach.call(chipsEl.children,function(b){ b.classList.toggle('on', b.dataset.k===ui.filter); });
+    ORDER.forEach(function(key){
+      var z=zones[key], c=counts(z);
+      z.zel.style.opacity=(ui.filter==='all'||ui.filter===key)?1:0.2;
+      var zc=z.zel.querySelector('.zcount');
+      zc.textContent= key==='carrel' ? '· '+c.free+' free · '+c.held+' held' : '· '+c.free+' free';
+      zc.style.color = key==='carrel' ? '#2A3B55' : 'var(--free)';
+      z.seats.forEach(function(s){
+        s.el.style.background=META[s.state].fill;
+        var sel=ui.selected&&ui.selected.seat===s;
+        s.el.style.boxShadow=sel?'0 0 0 2px #FFFFFF, 0 0 0 4px #0B1F3A':'none';
+        s.el.setAttribute('aria-label','Seat '+s.id+', '+META[s.state].label);
+      });
+    });
+    var p=document.getElementById('seat-panel');
+    if(!ui.selected){
+      p.innerHTML='<div style="display:flex;gap:12px;align-items:center"><div class="icon">'+TAP+'</div><span style="font-size:15px;font-weight:700">Tap any seat</span></div>';
+    } else {
+      var s=ui.selected.seat, m=META[s.state];
+      p.innerHTML='<div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;flex-direction:column;gap:2px">' +
+        '<span style="font-size:12px;font-weight:600;color:var(--muted)">'+zones[ui.selected.zone].name+'</span>' +
+        '<span style="font-size:20px;font-weight:800">Seat '+s.id+'</span></div>' +
+        '<span class="tag" style="font-size:12px;padding:5px 10px;background:'+m.bg+';color:'+m.fg+'">'+m.label+'</span></div>';
+    }
+  }
+
+  // ---------- Navigation ----------
+  var vMain=document.getElementById('v-main'), vMap=document.getElementById('v-map');
+  document.getElementById('open-map').addEventListener('click',function(){ vMain.classList.add('hidden-left'); vMap.classList.remove('hidden-right'); });
+  document.getElementById('close-map').addEventListener('click',function(){ vMap.classList.add('hidden-right'); vMain.classList.remove('hidden-left'); });
+
+  // ---------- Live simulation ----------
+  function tick(){
+    var keys=['quiet','quiet','collab'];
+    var key=keys[Math.floor(Math.random()*keys.length)], z=zones[key];
+    var pool=z.seats.filter(function(s){ return !(ui.selected&&ui.selected.seat===s); });
+    var s=pool[Math.floor(Math.random()*pool.length)];
+    var c=counts(z), next;
+    if(s.state==='occ') next = Math.random()<0.6?'free':'held';
+    else if(s.state==='held') next = Math.random()<0.5?'occ':'free';
+    else next = 'occ';
+    if(next==='free' && c.free>=Math.ceil(c.total*0.35)) next='occ';
+    if(next==='occ' && c.free<=2 && s.state==='free') return;
+    s.state=next; ui.lastChange=Date.now();
+    renderOverview(key); renderMap();
+    s.el.classList.remove('changed'); void s.el.offsetWidth; s.el.classList.add('changed');
+  }
+  function ago(){
+    var sec=Math.round((Date.now()-ui.lastChange)/1000);
+    var t= sec<5 ? 'Live · just now' : 'Live · '+sec+'s ago';
+    Array.prototype.forEach.call(document.querySelectorAll('.ago'),function(e){e.textContent=t;});
+  }
+  if(simulate){ setInterval(tick,5000); }
+  setInterval(ago,1000);
+
+  // ---------- Fit to frame ----------
+  function fit(){
+    var w=noFrame?390:414, h=noFrame?900:924, pad=noFrame?0:24;
+    var s=Math.min((innerWidth-pad)/w,(innerHeight-pad)/h);
+    document.getElementById('fit').style.transform='scale('+s+')';
+  }
+  addEventListener('resize',fit); fit();
+
+  renderOverview(); renderMap();
+})();
+</script>
+</body>
+</html>
